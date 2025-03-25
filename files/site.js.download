@@ -1,0 +1,2627 @@
+
+let link = $('#url_base').val();
+let raiz = $('#raiz').val();
+
+let _params = link.split('/');
+let winWidth = window.innerWidth;
+
+var btnApoiar = $('.apoiar');
+if(btnApoiar.length>0&&winWidth<720) btnApoiar.remove();
+
+var searchIcon = $('.search-icon');
+var searchBox = $('.search-box');
+searchIcon.on('click',function(){ 
+    searchIcon.toggleClass('search-icon-highlight');
+    searchBox.toggleClass('search-box-show'); 
+});
+
+const _minValueParcel = 75;
+
+function getIPFromAmazon() {
+    fetch("https://checkip.amazonaws.com/")
+    .then(res => res.text())
+    .then(data => { 
+        data = data.toString();
+        
+        /*
+        if(winWidth<1200 && data.trim()!=='177.22.161.31') {
+            alert('VERSÃO MOBILE EM ATUALIZAÇÃO');
+            $('.main_content').remove();
+        }
+        /*
+        if(data.trim()!=='177.22.161.31'&&data.trim()!=='177.22.171.125'){ 
+            alert('HOMOLOG EM ATUALIZAÇÃO');
+            $('.main_content').remove();
+        }
+        */
+    })
+}  
+getIPFromAmazon();
+
+
+const loader = "<div class='loading-ajax'><span class='loader'></span></div>";
+const loaderMini = "<div class='loading-ajax-mini'><span class='loader'></span></div>";
+
+const url = (param = '') =>
+{
+    let ret = link;
+    if(param !== '') ret += '/'+param;
+    return ret;
+}
+
+const go = (param) =>
+{
+    window.location.href = param;
+}
+
+const cPage = () =>
+{
+    let arr = window.location.pathname.split('/');
+    if(arr[1] !== undefined && arr[1] !== 'meeplestarter')
+    {
+        return arr[1];
+    }
+    else if(arr[2] !== undefined && arr[1] === 'meeplestarter')
+    {
+        return arr[2];
+    }
+    else
+    {
+        return 'home';
+    }
+}
+
+//console.log('cPage: ', cPage());
+
+const dd = (param) =>
+{
+    return console.log(param);
+}
+
+const ajax_load = (action) =>
+{
+    let loading = $('.loading');
+
+    if(action == 'open')
+    {
+        loading.fadeIn(200);
+    }
+
+    if(action == 'close')
+    {
+        loading.fadeOut(200);
+    }
+}
+
+/**
+ *
+ * @param formData
+ */
+const debugFormData = (formData) =>
+{
+    const formDataObject = {};
+    formData.forEach((value, key) => {
+        formDataObject[key] = value;
+    });
+    console.log('formDataObject: ', formDataObject);
+    return;
+}
+
+/**
+ *
+ * @param form
+ * @returns {{}}
+ */
+const serializeFormObject = (form) =>
+{
+    const formData = new FormData(form);
+    const formObject = {};
+
+    formData.forEach((value, key) => {
+        if (formObject[key] !== undefined) {
+            if (!Array.isArray(formObject[key])) {
+                formObject[key] = [formObject[key]];
+            }
+            if (value instanceof File) {
+                formObject[key].push(value);
+            } else {
+                formObject[key].push(value);
+            }
+        } else {
+            formObject[key] = value;
+        }
+    });
+    return formObject;
+}
+
+const checkDescription = (formData) =>
+{
+    if (formData.has('description')) {
+        var descriptionValue = formData.get('description');
+        return descriptionValue.trim() !== '';
+    }
+}
+
+/**
+ *
+ * @param method
+ * @param action
+ * @param formData
+ */
+const sendToModel = (method, action, formData) =>
+{
+    $.ajax(
+        {
+            type: method,
+            url: action,
+            data: formData,
+            dataType: "json",
+            processData: false,
+            cache: false,
+            contentType: false,
+            beforeSend: function (load) {
+                ajax_load('open');
+            },
+            success: function (data) {
+                ajax_load('close');
+                new Toast(data.title, data.text, data.type);
+
+                if (data.config.reset)
+                    form.reset();
+
+                if(data.config.refresh) {
+                    setTimeout(function(){
+                        window.location.reload();
+                     }, 1000);
+                }
+            }
+        });
+}
+
+window.onload = function()
+{
+    $('.loading').fadeOut();
+    $('html').css('overflow-y', 'auto');
+
+    $(document).on('click','#menuDropDownButton', () => {
+        $('.menuDropDown',document).toggle();
+    });
+
+    Util.countering();
+    if(cPage!='') Util.iframeAdjust();
+
+    $('.select2').select2({
+        theme: "bootstrap-5",
+        placeholder: $( this ).data( 'placeholder' ),
+        allowClear: true,
+        language: "pt-BR"
+    });
+
+    $('.select2Custom').select2({
+        maximumSelectionLength: 3,
+        placeholder: "Selecione até 3 opções",
+        allowClear: true,
+        language: "pt-BR"
+    });
+
+    const addSelectAll = matches => {
+        if (matches.length > 0) {
+            return [
+                { id: 'selectAll', text: 'Selecionar todas', matchIds: matches.map(match => match.id) },
+                ...matches
+            ];
+        }
+    };
+
+    //selecionar todas tem de ser uma opção nas novidades
+    $('.select2Custom3').select2({
+        allowClear: true,
+        placeholder: $(this).data('placeholder'),
+        sorter: addSelectAll,
+        language: "pt-BR"
+    });
+
+    
+    $('.select2Custom2').select2({
+        allowClear: true,
+        placeholder: $(this).data('placeholder'),
+        sorter: addSelectAll,
+        language: "pt-BR"
+    }).on('select2:select', function (e) {
+        if (e.params.data.id === 'selectAll') {
+            $(this).val($(this).find('option').map(function() {
+                return this.value !== '' ? this.value : null;
+            })).trigger('change');
+        }
+    });
+    
+
+    $('#summernote').summernote({
+        placeholder: 'Campanha',
+        height: 450,
+        toolbar: [
+            ['style', ['style']],
+            ['font', ['bold', 'italic', 'underline', 'strikethrough', 'clear']],
+            ['fontsize', ['fontsize']],
+            ['color', ['color']],
+            ['para', ['ul', 'ol', 'paragraph']],
+            ['height', ['height']],
+            ['table', ['table']],
+            ['tableStyle', ['table-bordered', 'table-striped', 'table-hover']],
+            ['insert', ['link', 'picture', 'video', 'hr']],
+            ['view', ['fullscreen']]
+        ],
+        popover: {
+            image: [
+                ['custom', ['imageAttributes']],
+                ['imagesize', ['resizeFull', 'resizeHalf', 'resizeQuarter', 'resizeNone']],
+                ['float', ['floatLeft', 'floatRight', 'floatNone']],
+                ['remove', ['removeMedia']]
+            ],
+        },
+        imageAttributes:{
+            icon:'<i class="note-icon-link"/>',
+            removeEmpty: false, // true = remove attributes | false = leave empty if present
+            disableUpload: true // true = don't display Upload Options | Display Upload Options
+        },
+        dialogsInBody: true,
+        fontSizes: ['8', '10', '12', '14', '18', '24', '36'],
+        callbacks: {
+            onInit: function() {
+
+            },
+            onImageUpload: function(files)
+            {
+                var formData = new FormData();
+                let url = $('input[name="url"]').val();
+                formData.append('file', files[0]);
+
+                $.ajax({
+                    url: url,
+                    method: 'POST',
+                    data: formData,
+                    dataType: "json",
+                    processData: false,
+                    cache: false,
+                    contentType: false,
+                    beforeSend: function(load)
+                    {
+                        ajax_load('open');
+                    },
+                    success: function(response)
+                    {
+                        ajax_load('close');
+                        $('#summernote').summernote('editor.insertImage', `${response.file}`);
+                    }
+                });
+            },
+            onPaste: function (e) {
+                var bufferText = ((e.originalEvent || e).clipboardData || window.clipboardData).getData('Text');
+                e.preventDefault();
+                document.execCommand('insertText', false, bufferText);
+            }
+        }
+    });
+
+    $('#summernotenews').summernote({
+        placeholder: 'Descrição da notícia/newsletter',
+        height: 450,
+        toolbar: [
+            ['font', ['bold', 'italic', 'underline', 'strikethrough', 'clear']],
+            ['fontsize', ['fontsize']],
+            ['color', ['color']],
+            ['para', ['paragraph']],
+            ['height', ['height']],
+            ['table', ['table']],
+            ['insert', ['link', 'picture']]
+        ],
+        popover: {
+            image: [
+                ['custom', ['imageAttributes']],
+                ['imagesize', ['resizeFull', 'resizeHalf', 'resizeQuarter', 'resizeNone']],
+                ['float', ['floatLeft', 'floatRight', 'floatNone']],
+                ['remove', ['removeMedia']]
+            ],
+        },
+        imageAttributes:{
+            icon:'<i class="note-icon-pencil"/>',
+            removeEmpty: false, // true = remove attributes | false = leave empty if present
+            disableUpload: true // true = don't display Upload Options | Display Upload Options
+        },
+        dialogsInBody: true,
+        fontSizes: ['8', '10', '12', '14', '18'],
+        callbacks: {
+            onInit: function() {
+
+            },
+            onImageUpload: function(files)
+            {
+                var formData = new FormData();
+                let url = $('input[name="url"]').val();
+                formData.append('file', files[0]);
+
+                $.ajax({
+                    url: url,
+                    method: 'POST',
+                    data: formData,
+                    dataType: "json",
+                    processData: false,
+                    cache: false,
+                    contentType: false,
+                    beforeSend: function(load)
+                    {
+                        ajax_load('open');
+                    },
+                    success: function(response)
+                    {
+                        ajax_load('close');
+                        $('#summernotenews').summernote('editor.insertImage', `${response.file}`);
+                    }
+                });
+            },
+            onPaste: function (e) {
+                var bufferText = ((e.originalEvent || e).clipboardData || window.clipboardData).getData('Text');
+                e.preventDefault();
+                document.execCommand('insertText', false, bufferText);
+            }
+        }
+    });
+};
+
+$(".form").validate({
+    submitHandler: function(form, event) {
+        let formData = new FormData(form);
+        $.ajax(
+            {
+                type: form.method,
+                url: form.action,
+                data: formData,
+                dataType: "json",
+                processData: false,
+                cache: false,
+                contentType: false,
+                beforeSend: function (load) {
+                    ajax_load('open');
+                },
+                success: function (data) {
+                    ajax_load('close');
+                    new Toast(data.title, data.text, data.type);
+
+                    if (data.config.reset)
+                        form.reset();
+
+                    //vou deixar aqui como exemplo e pra não quebrar algo que tenha sido feito com isto
+                    if(data.config.refrash)
+                        window.location.reload();
+
+                    if(data.config.refresh)
+                        window.location.reload();
+
+                    switch (data.page) {
+                        case 'login':
+                            if (data.config.logged) {
+                                localStorage.setItem("_customer", JSON.stringify(data.config._customer));
+                                if (data.config._post.remember == 'on') {
+                                    localStorage.setItem("_loginSite", JSON.stringify(data.config._post));
+                                }
+                                window.location.href = url('');
+                            }
+                            break;
+                        case 'newsletter':
+                            var newsBox = $('.modal-news',document);
+                            newsBox.removeClass('on');
+                            break;
+                        case 'remember':
+                            var remBox = $('.modal-remember',document);
+                            remBox.removeClass('on');
+                            break;
+                    }
+                }
+            });
+    }
+});
+
+$(".btnReplyResponse").on('click', function (e){
+    e.preventDefault();
+
+    let $form = $(this).closest('.formReplyResponse');
+    let action = $($form).data('action');
+    let method = $($form).data('method');
+    const formData = new FormData($form[0]);
+
+    if (checkDescription(formData)) sendToModel(method, action, formData);
+});
+
+$(".btnFormResponse").on('click', function (e){
+    e.preventDefault();
+
+    let $form = $(this).closest('.formResponse');
+    let action = $($form).data('action');
+    let method = $($form).data('method');
+    const formData = new FormData($form[0]);
+
+    if (checkDescription(formData)) sendToModel(method, action, formData);
+});
+
+$(".btnFormComment").on('click', function (e){
+    e.preventDefault();
+
+    let $form = $(this).closest('.formComment');
+    let action = $($form).data('action');
+    let method = $($form).data('method');
+    const formData = new FormData($form[0]);
+
+    if (checkDescription(formData)) sendToModel(method, action, formData);
+});
+
+$("#formAJAX").validate({
+    submitHandler: function(form, event) {
+        let formData = new FormData(form);
+        $.ajax(
+            {
+                type: form.method,
+                url: form.action,
+                data: formData,
+                dataType: "json",
+                processData: false,
+                cache: false,
+                contentType: false,
+                beforeSend: function (load) {
+                    ajax_load('open');
+                },
+                success: function (data) {
+                    ajax_load('close');
+                    new Toast(data.title, data.text, data.type);
+
+                    if (data.config.reset)
+                        form.reset();
+
+                    if (data.config.reload)
+                        window.location.reload();
+
+                    if (data.config.href) {
+                        setTimeout(() => window.location = data.config.href, 1500);
+                    }
+
+                    var _action = (form.action.split('/'))[3];
+                    if(_action=='saveReward') clearCardReward();
+
+                }
+            });
+    }
+});
+
+function clearCardReward(){
+    var _card = $('.card',document);
+    _card.find('#prevImage').attr('src','https://placehold.co/424x318?text=Foto 424x318');
+    _card.find('#prevTitle').text('');
+    _card.find('#prevSubTitle').text('');
+    _card.find('#prevText').text('');
+    _card.find('#prevValue').text('R$');
+}
+
+$("#formAJAX2").validate({
+    submitHandler: function(form, event) {
+        let formData = new FormData(form);
+        $.ajax(
+            {
+                type: form.method,
+                url: form.action,
+                data: formData,
+                dataType: "json",
+                processData: false,
+                cache: false,
+                contentType: false,
+                beforeSend: function (load) {
+                    ajax_load('open');
+                },
+                success: function (data) {
+                    ajax_load('close');
+                    new Toast(data.title, data.text, data.type);
+
+                    if (data.config.reset)
+                        form.reset();
+
+                    if (data.config.reload)
+                        window.location.reload();
+                }
+            });
+    }
+});
+
+$("#formAJAX3").validate({
+    submitHandler: function(form, event) {
+        let formData = new FormData(form);
+        $.ajax(
+            {
+                type: form.method,
+                url: form.action,
+                data: formData,
+                dataType: "json",
+                processData: false,
+                cache: false,
+                contentType: false,
+                beforeSend: function (load) {
+                    ajax_load('open');
+                },
+                success: function (data) {
+                    ajax_load('close');
+                    new Toast(data.title, data.text, data.type);
+
+                    if (data.config.reset)
+                        form.reset();
+
+                    if (data.config.reload)
+                        window.location.reload();
+                }
+            });
+    }
+});
+
+$("#formRemember").validate({
+    submitHandler: function(form, event) {
+        let formData = new FormData(form);
+        $.ajax(
+            {
+                type: form.method,
+                url: form.action,
+                data: formData,
+                dataType: "json",
+                processData: false,
+                cache: false,
+                contentType: false,
+                beforeSend: function (load) {
+                    ajax_load('open');
+                },
+                success: function (data) {
+                    ajax_load('close');
+                    new Toast(data.title, data.text, data.type);
+
+                    if (data.config.reset)
+                        form.reset();
+
+                    switch (data.page) {
+                        case 'remember':
+                            var remBox = $('.modal-remember',document);
+                            remBox.removeClass('on');
+                            break;
+                    }
+                }
+            });
+    }
+});
+
+$('form.editAJAX').on('submit', function (e){
+    console.log('editAJAX');
+    e.preventDefault();
+    //get formData from form submited
+    let formData = $(this).serializeArray();
+    $.ajax({
+        type: "POST",
+        url: $(this).attr('action'),
+        data: formData,
+        dataType: "json",
+        beforeSend: function (load) {
+            ajax_load('open');
+        },
+        success: function (data) {
+            ajax_load('close');
+            new Toast(data.title, data.text, data.type);
+
+            if (data.config.reset)
+                form.reset();
+
+            if(data.config.reload) {
+                setTimeout(function() {
+                    window.location.reload();
+                }, 1500)
+            }
+        }
+    });
+}) 
+
+
+function copyToClipboard(text) {
+    var success = true;
+    var range = document.createRange();
+    var selection;
+
+    if (window.clipboardData) {
+        window.clipboardData.setData("Text", text);
+    } else {
+        var tmpElem = document.createElement("div");
+        tmpElem.style.position = "absolute";
+        tmpElem.style.left = "-1000px";
+        tmpElem.style.top = "-1000px";
+        tmpElem.textContent = text;
+        document.body.appendChild(tmpElem);
+        range.selectNodeContents(tmpElem);
+        selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        try {
+            success = document.execCommand("copy");
+        } catch (e) {
+            success = false;
+        }
+        if (success) {
+            console.log("Texto: '" + text + "' copiado!");
+            document.body.removeChild(tmpElem);
+            return true;
+        } else {
+            return false;
+        }
+    }
+}
+
+const copyUrl = url => {
+    if (copyToClipboard(url)) {
+        new Toast('Sucesso', 'Conteúdo copiado: ' + url, 'success');
+    } else {
+        new Toast('Opps!', 'Erro ao copiar: ' + url, 'error');
+    }
+}
+
+const copyPix = e =>
+{
+    if (copyToClipboard(e.data('pix'))) {
+        new Toast('Sucesso', 'Chave PIX copiada', 'success');
+    } else {
+        new Toast('Opps!', 'Erro ao copiar: ' + e.data('pix'), 'error');
+    }
+}
+
+const addToCart = that =>
+{
+    let id = that.data('id');
+    let project = that.data('project');
+    let project_id = that.data('project_id');
+    let value = that.data('value');
+    let url = that.data('url');
+    let image = that.data('image');
+    let amount = that.closest('span').find('input[name="amount"]').val();
+
+    let data = {
+        'id': id,
+        'project': project,
+        'project_id': project_id,
+        'value': value,
+        'amount': amount,
+        'image': image
+    };
+
+    $.ajax(
+        {
+            type: 'post',
+            url: url,
+            data: data,
+            dataType: "json",
+            beforeSend: function(load)
+            {
+                $('.itens').html(loader);
+                $('.itensCheckout').html(loaderMini);
+            },
+            success: function(data)
+            {
+                console.log(data);
+                new Toast(data.title, data.text, data.type);
+
+                $('.itens').html(data.config.data);
+                $('.itensCheckout').html(data.config.dataCheckout);
+
+                if(data.config.count > 0) {
+                    $('#countCart').text(data.config.count).addClass('show');
+                    $('#btnFinalizar').removeAttr('disabled');
+                    $('#btnLimpar').removeAttr('disabled');
+                } else {
+                    $('#countCart').text('').removeClass('show');
+                    $('#btnFinalizar').attr('disabled', true);
+                    $('#btnLimpar').attr('disabled', true);
+                }
+
+                if(data.config.total > '0') {
+                    $('#totalValue').text(`R$ ${data.config.total}`);
+                    $('#totalCheckout').text(`R$ ${data.config.total}`);
+                } else {
+                    $('#totalValue').text("R$ 00,00");
+                    $('#totalCheckout').text("R$ 00,00");
+                }
+
+                // $('.cart-overlay').addClass('show');
+                // $('.cart').addClass('show');
+                // $('html').css('overflow-y', 'hidden');
+
+                let htmlSelect = "";
+                let totalToClean = data.config.total;
+                let totalCleaned = totalToClean.replace('.',''); totalCleaned = parseFloat(totalCleaned.replace(',','.')).toFixed(2); 
+                let totalValue = totalCleaned;
+                if (totalValue < 150) 
+                {
+                    htmlSelect = "<option value='1'>1x de R$ "+Util.number_format(totalValue, 2, ',', '.')+"</option>";
+                } 
+                else 
+                {
+                    for (let i = 1; i <= 6; i++) 
+                    {
+                        let valor_parcela = parseFloat(totalValue / i).toFixed(2);
+                        if ((totalValue / i) >= _minValueParcel) 
+                        {
+                                htmlSelect += "<option value='"+i+"'>"+i+"x de R$ "+Util.number_format(valor_parcela, 2, ',', '.')+"</option>"
+                            
+                        } 
+                    }
+                }
+                $("#card_installments").html(htmlSelect);
+
+                setTimeout(() => { $('.loading').fadeOut(); }, 100);
+
+                const data_analytics = {
+                    product_id: project_id,
+                    product_name: project,
+                    product_amount: amount,
+                    product_value: value,
+                    product_total: value * amount
+                }
+                analyticsAddToCart(data_analytics);
+
+            }
+        });
+}
+
+const clearCart = that =>
+{
+    let url = that.data('url');
+    dd(that);
+    $.ajax(
+        {
+            type: 'post',
+            url: url,
+            dataType: "json",
+            beforeSend: function(load)
+            {
+                ajax_load('open');
+                $('.itens').html(loader);
+                $('.itensCheckout').html(loaderMini);
+            },
+            success: function(data)
+            {
+                ajax_load('close');
+                new Toast(data.title, data.text, data.type);
+
+                if(data.config.count > 0) {
+                    $('#countCart').text(data.config.count).addClass('show');
+                    $('#btnFinalizar').removeAttr('disabled');
+                    $('#btnLimpar').removeAttr('disabled');
+                } else {
+                    $('#countCart').text('').removeClass('show');
+                    $('#btnFinalizar').attr('disabled', true);
+                    $('#btnLimpar').attr('disabled', true);
+                }
+
+                if(data.config.total > '0') {
+                    $('#totalValue').text(`R$ ${data.config.total}`);
+                    $('#totalCheckout').text(`R$ ${data.config.total}`);
+                } else {
+                    $('#totalValue').text("R$ 00,00");
+                    $('#totalCheckout').text("R$ 00,00");
+                }
+
+                $('.cart-overlay').removeClass('show');
+                $('.cart').removeClass('show');
+                $('html').css('overflow-y', 'auto');
+                $('.itens').html('');
+                $('.itensCheckout').html('');
+                $("#card_installments").html('');
+            }
+        });
+}
+
+const deleteItem = that =>
+{
+    let url = that.data('url');
+
+    $.ajax(
+        {
+            type: 'get',
+            url: url,
+            dataType: "json",
+            beforeSend: function(load)
+            {
+                $('.itens').html(loader);
+                $('.itensCheckout').html(loaderMini);
+            },
+            success: function(data)
+            {
+                new Toast(data.title, data.text, data.type);
+
+                $('.itens').html(data.config.data);
+                $('.itensCheckout').html(data.config.dataCheckout);
+
+                if(data.config.count > 0) {
+                    $('#countCart').text(data.config.count).addClass('show');
+                    $('#btnFinalizar').removeAttr('disabled');
+                    $('#btnLimpar').removeAttr('disabled');
+                } else {
+                    $('#countCart').text('').removeClass('show');
+                    $('#btnFinalizar').attr('disabled', true);
+                    $('#btnLimpar').attr('disabled', true);
+                }
+
+                if(data.config.total > '0') {
+                    $('#totalValue').text(`R$ ${data.config.total}`);
+                    $('#totalCheckout').text(`R$ ${data.config.total}`);
+                } else {
+                    $('#totalValue').text("R$ 00,00");
+                    $('#totalCheckout').text("R$ 00,00");
+                }
+
+                let htmlSelect = "";
+                let totalToClean = data.config.total;
+                let totalCleaned = totalToClean.replace('.',''); totalCleaned = parseFloat(totalCleaned.replace(',','.')).toFixed(2); 
+                let totalValue = totalCleaned;
+                if (totalValue < 150) 
+                {
+                    htmlSelect = "<option value='1'>1x de R$ "+Util.number_format(totalValue, 2, ',', '.')+"</option>";
+                } 
+                else 
+                {
+                    for (let i = 1; i <= 6; i++) 
+                    {
+                        let valor_parcela = parseFloat(totalValue / i).toFixed(2);
+                        if ((totalValue / i) >= _minValueParcel) 
+                        {
+                                htmlSelect += "<option value='"+i+"'>"+i+"x de R$ "+Util.number_format(valor_parcela, 2, ',', '.')+"</option>"
+                            
+                        } 
+                    }
+                }
+                $("#card_installments").html(htmlSelect);
+            }
+        });
+}
+
+const openCart = _ =>
+{   
+    $('html').css('overflow-y', 'hidden');
+    $('.cart-overlay',document).addClass('show');
+    $('.cart',document).addClass('show');
+}
+
+$(document).on('click','.open-cart',function(){
+    openCart();
+});
+
+const closeCart = _ =>
+{
+    $('.cart-overlay').removeClass('show');
+    $('.cart').removeClass('show');
+    $('html').css('overflow-y', 'auto');
+}
+
+const getSession = _ =>
+{
+    $.ajax(
+        {
+            type: 'post',
+            url: url('getSession'),
+            dataType: "json",
+            beforeSend: function(load)
+            {
+                $('.itens').html(loader);
+                $('.itensCheckout').html(loaderMini);
+            },
+            success: function(data)
+            {
+                $('.itens').html(data.data);
+                $('.itensCheckout').html(data.dataCheckout);
+
+                let totalCheckout = $('#totalCheckout',document);
+                if(totalCheckout.length>0){
+                    var _total = totalCheckout.attr('data-total');
+                    var _items = totalCheckout.attr('data-items');
+                    var _ids = (totalCheckout.attr('data-ids')).split(',');
+                    let data_checkout = {
+                        total: _total,
+                        items: _items,
+                        items_id: _ids
+                    }
+                    analyticsCheckout(data_checkout);
+                }
+
+                if(data.count > 0) {
+                    $('#countCart').text(data.count).addClass('show');
+                    $('#btnFinalizar').removeAttr('disabled');
+                    $('#btnLimpar').removeAttr('disabled');
+                } else {
+                    $('#countCart').text('').removeClass('show');
+                    $('#btnFinalizar').attr('disabled', true);
+                    $('#btnLimpar').attr('disabled', true);
+                }
+
+                if(data.total > '0') {
+                    $('#totalValue').text(`R$ ${data.total}`);
+                    $('#totalCheckout').text(`R$ ${data.total}`);
+                } else {
+                    $('#totalValue').text("R$ 00,00");
+                    $('#totalCheckout').text("R$ 00,00");
+                }
+
+                let htmlSelect = "";
+                let totalToClean = data.total;
+                let totalCleaned = totalToClean.replace('.',''); totalCleaned = parseFloat(totalCleaned.replace(',','.')).toFixed(2); 
+                let totalValue = totalCleaned;
+                if (totalValue < 150) 
+                {
+                    htmlSelect = "<option value='1'>1x de R$ "+Util.number_format(totalValue, 2, ',', '.')+"</option>";
+                } 
+                else 
+                {
+                    for (let i = 1; i <= 6; i++) 
+                    {
+                        let valor_parcela = parseFloat(totalValue / i).toFixed(2);
+                        if ((totalValue / i) >= _minValueParcel) 
+                        {
+                                htmlSelect += "<option value='"+i+"'>"+i+"x de R$ "+Util.number_format(valor_parcela, 2, ',', '.')+"</option>"
+                            
+                        } 
+                    }
+                }
+                $("#card_installments").html(htmlSelect);
+            }
+        });
+}
+
+const scrollToRewards = _ =>
+{
+    var target = $('.proj-rewards');
+    var _top = 900;
+    if(target.length) _top = parseInt(target.offset().top)-150;
+    window.scrollTo({
+        top: _top,
+        behavior: 'smooth'
+    });
+}
+
+const followProject = that =>
+{
+    let project_id = that.data('id');
+    let url = that.data('url');
+
+    let data = {
+        'project_id': project_id,
+        'url': url
+    };
+
+    $.ajax(
+        {
+            type: 'post',
+            url: url,
+            data: data,
+            dataType: "json",
+            beforeSend: function(load)
+            {
+                ajax_load('open');
+            },
+            success: function(data)
+            {
+                ajax_load('close');
+                new Toast(data.title, data.text, data.type);
+                setTimeout(function(){
+                    window.location.reload();
+                 }, 1000);
+            }
+        });
+}
+
+function clickFollowProject(project_id,url,loader){
+    let data = { 'project_id': project_id, 'url': url };
+    $.ajax({
+        type: 'post',
+        url: url,
+        data: data,
+        dataType: "json",
+        beforeSend: function(load){ 
+            if(loader) ajax_load('open'); 
+        },
+        success: function(data)
+        {
+            if(loader) ajax_load('close');
+            new Toast(data.title, data.text, data.type);
+            $('a.call-follow button:not(.rewards .baker)').css('background','#00b6ff!important').removeAttr('onclick').text('Você segue este projeto');
+            $('button.call-follow:not(.rewards .baker)').css('background','#00b6ff!important').removeAttr('onclick').text('Você segue este projeto');
+            $('a.call-singin button:not(.rewards .baker)').css('background','#00b6ff!important').removeAttr('onclick').text('Você segue este projeto');
+            $('button.call-singin:not(.rewards .baker)').css('background','#00b6ff!important').removeAttr('onclick').text('Você segue este projeto');
+            setTimeout(function(){
+                $('a.call-follow button:not(.rewards .baker)').css('background','#28348A!important');
+                $('button.call-follow:not(.rewards .baker)').css('background','#28348A!important');
+                $('a.call-singin button:not(.rewards .baker)').css('background','#28348A!important');
+                $('button.call-singin:not(.rewards .baker)').css('background','#28348A!important');
+            }, 800);
+            setTimeout(function(){ $('.call-follow').removeClass('call-follow'); }, 1000);
+        }
+    });
+}
+
+$('.amount ._plus',document).on('click', function (e) {
+    let amount = $(this).parent().find('[name="amount"]');
+    let value = amount.val();
+    let unit = $(this).closest('span').find('.unit').data('unit');
+    let total = $(this).closest('span').find('.total');
+    (value == 0) ? value = 1 : value++;
+    (value > 0 ) ? total.text('R$ '+Util.number_format((unit*value), 2, ',', '.')) : '';
+    amount.val(value);
+});
+
+$('.amount ._minus',document).on('click', function (e) {
+    let amount = $(this).parent().find('[name="amount"]');
+    let value = amount.val();
+    let unit = $(this).closest('span').find('.unit').data('unit');
+    let total = $(this).closest('span').find('.total');
+    (value == 0) ? value = 1 : value--;
+    (value > 0 ) ? total.text('R$ '+Util.number_format((unit*value), 2, ',', '.')) : '';
+    amount.val(value);
+
+});
+
+$('.helper i',document).on('click',function(e){
+    var that = $(this); 
+    var input = that.prev('input');
+    var type = input.attr('type'); 
+    if(type=="password"){ 
+        input.attr('type','text');
+        that.addClass('on');
+    }
+    if(type=="text"){ 
+        input.attr('type','password');
+        that.removeClass('on');
+    }
+});
+
+$('.video i').on('click',function(e){
+    var that = $(this); 
+    var videoBox = that.closest('div');
+    if(videoBox.hasClass('on')) videoBox.removeClass('on');
+    if(!videoBox.hasClass('on')) videoBox.addClass('on');
+});
+
+var newsBox = $('.modal-news',document);
+$('.open-news').on('click',function(e){
+    var that = $(this); 
+    newsBox.addClass('on');
+});
+$('.close-news').on('click',function(e){
+    var that = $(this); 
+    newsBox.removeClass('on');
+});
+
+var rememberBox = $('.modal-remember',document);
+$('.open-remember').on('click',function(e){
+    var that = $(this); 
+    let project_id = that.data('project_id');
+    rememberBox.find('input[name="project_id"]').val(project_id);
+    rememberBox.addClass('on');
+});
+$('.close-remember').on('click',function(e){
+    var that = $(this); 
+    rememberBox.find('input[name="project_id"]').val();
+    rememberBox.removeClass('on');
+});
+
+var notifyBox = $('.modal-notify',document);
+function resetLastModalView(){ localStorage.removeItem('lastViewNotify'); }
+function notifyBoxFn(){
+    
+    let lastViewNotify = localStorage.getItem("lastViewNotify");
+    let now = new Date().getTime();
+    let _48 = 48 * 60 * 60 * 1000;
+
+    if (!lastViewNotify || now - lastViewNotify >= _48) {
+        resetLastModalView();
+        localStorage.setItem("lastViewNotify", now);
+        notifyBox.addClass('on');
+    } else {
+        let timeRest = ((_48 - (now - lastViewNotify)) / 1000 / 60 / 60).toFixed(2);
+        console.log(`A função já foi executada. Tente novamente em ${timeRest} horas.`);
+    }
+}
+//notifyBoxFn();
+
+$('.close-notify').on('click',function(e){
+    var that = $(this); 
+    newsBox.removeClass('on');
+});
+
+$(document).on('change','input[name="zipcode"]', function(){
+    var that = $(this);
+    var cep = that.val().replace(/\D/g, '');
+    console.log();
+    if(cep.length>5){
+        $.getJSON("https://viacep.com.br/ws/" + cep + "/json/?callback=?", function(dados) {
+            console.log(dados);
+            if (!("erro" in dados)) {
+                that.closest('.box-form').find('input[name="district"]').val(dados.bairro).change();
+                that.closest('.box-form').find('input[name="address"]').val(dados.logradouro).change();
+                that.closest('.box-form').find('input[name="state"]').val(dados.uf).change();
+                that.closest('.box-form').find('input[name="city"]').val(dados.localidade).change();                     
+                that.closest('.box-form').find('input[name="complement"]').val(dados.complemento).change();                     
+                that.closest('.box-form').find('input[name="number"]').focus();                      
+            } else {
+                new Toast(
+                    "Ops!",
+                    "CEP não encontrado.",
+                    "error"
+                )
+            }
+        });
+    }
+});
+
+jQuery.validator.setDefaults({
+  debug: true,
+  success: "valid"
+});
+
+$("form#formPay").validate(
+{
+    rules: {
+        card_number: {
+            required: true,
+            cardNumber: true
+        },
+    },
+    messages: {
+        pay_type: {
+            required: 'Selecione um método de pagamento!'
+        }/*,
+        cpf: {
+            required: 'Informe seu CPF/CNPJ!'
+        },
+        name: {
+            required: 'Informe seu nome!'
+        },
+        email: {
+            required: 'Informe seu e-mail!',
+            email: "Informe um e-mail válido!"
+        },
+        card_number: {
+            required: 'Informe o número do cartão!'
+        },
+        card_holder: {
+            required: 'Informe o nome do titular!'
+        },
+        card_valid: {
+            required: 'Informe mês e ano de expiração!'
+        },
+        card_csv: {
+            required: 'Informe o código de segurança!'
+        }
+        */
+    },/*
+    errorPlacement: function(error, element)
+    {
+        if (!error.is(':empty')) 
+        {
+            if (element.is(':checkbox') || element.is(':radio')) 
+            {
+                error.insertAfter(element.closest('.form-check'));
+            } 
+            else 
+            {
+                error.insertAfter(element);
+            }
+        }              
+    },*/
+    errorPlacement: function(error, element){},
+    success: function(label) {
+        label.remove();
+    },
+    submitHandler: function(form, event)
+    {
+        let formData = new FormData(form);
+        $.ajax({
+            url:form.action,
+            type:"post",
+            data: formData,
+            processData: false,
+            cache: false,
+            contentType: false,
+            dataType: "json",
+            beforeSend: function(load)
+            {
+                ajax_load('open');
+            },
+            success: function(data)
+            {
+                ajax_load('close');
+                new Toast(data.title, data.text, data.type);
+
+                if(data.config.redirect) {
+                    setTimeout(function () {
+                        go(data.config.redirect);
+                    }, 2000);
+                }
+
+                if(data.config.showModal) {
+
+                    var modalQrCode = new bootstrap.Modal(document.getElementById('modalQrCode'), {
+                        keyboard: false
+                    });
+
+                    modalQrCode.show();
+                    Util.adjustModalBackdrop();
+
+                    $('#qrcode').attr('src', 'data:image/png;base64,' + data.config.qrcode);
+                    $('#value').text(data.config.value);
+                    $('#btnCopyPix').data('pix', data.config.qr);
+
+                    let myModal = document.getElementById('modalQrCode');
+                    myModal.addEventListener('hidden.bs.modal', function (event) {
+                        setTimeout(function () {
+                            go(data.config.url);
+                        }, 1000);
+                    })
+                }
+                console.log('success:', data);
+            },
+            error: function(data)
+            {
+                ajax_load('close');
+                console.error('error:', data);
+            }
+        });
+    }
+});
+
+$("form#formSubscribe").validate(
+{
+    rules: {
+        card_number: {
+            required: true,
+            cardNumber: true
+        },
+    },
+    /*
+    messages: {
+        cpf: {
+            required: 'Informe seu CPF/CNPJ!'
+        },
+        name: {
+            required: 'Informe seu nome!'
+        },
+        email: {
+            required: 'Informe seu e-mail!',
+            email: "Informe um e-mail válido!"
+        },
+        card_number: {
+            required: 'Informe o número do cartão!'
+        },
+        card_holder: {
+            required: 'Informe o nome do titular!'
+        },
+        card_valid: {
+            required: 'Informe mês e ano de expiração!'
+        },
+        card_csv: {
+            required: 'Informe o código de segurança!'
+        }
+    },
+    errorPlacement: function(error, element)
+    {
+        if (!error.is(':empty')) 
+        {
+            if (element.is(':checkbox') || element.is(':radio')) 
+            {
+                error.insertAfter(element.closest('.form-check'));
+            } 
+            else 
+            {
+                error.insertAfter(element);
+            }
+        }              
+    },
+    */
+    errorPlacement: function(error, element) {},
+    success: function(label) {
+        label.remove();
+    },
+    submitHandler: function(form, event)
+    {
+        let formData = new FormData(form);
+        $.ajax({
+            url:form.action,
+            type:"post",
+            data: formData,
+            processData: false,
+            cache: false,
+            contentType: false,
+            dataType: "json",
+            beforeSend: function(load)
+            {
+                ajax_load('open');
+            },
+            success: function(data)
+            {
+                ajax_load('close');
+                new Toast(data.title, data.text, data.type);
+
+                if(data.config.redirect) {
+                    setTimeout(function () {
+                        go(data.config.redirect);
+                    }, 2000);
+                }
+                
+                console.log('success:', data);
+            },
+            error: function(data)
+            {
+                ajax_load('close');
+                console.error('error:', data);
+            }
+        });
+    }
+});
+
+$('.cart-overlay').on('click', function (e) {
+    e.preventDefault();
+    $(this).removeClass('show');
+    $('.cart').removeClass('show');
+    $('html').css('overflow-y', 'auto');
+});
+
+jQuery.validator.addMethod("cardNumber", function (value, element) 
+{
+  value = value.replace(/\D/g, "");
+  return (
+    /^4[0-9]{15}$/.test(value) || // Visa
+    /^((5|2)[1-5]\d{4}|677189)\d{10}$/.test(value) || // Mastercard
+    /^4011(78|79)|^43(1274|8935)|^45(1416|7393|763(1|2))|^50(4175|6699|67[0-6][0-9]|677[0-8]|9[0-8][0-9]{2}|99[0-8][0-9]|999[0-9])|^627780|^63(6297|6368|6369)|^65(0(0(3([1-3]|[5-9])|4([0-9])|5[0-1])|4(0[5-9]|[1-3][0-9]|8[5-9]|9[0-9])|5([0-2][0-9]|3[0-8]|4[1-9]|[5-8][0-9]|9[0-8])|7(0[0-9]|1[0-8]|2[0-7])|9(0[1-9]|[1-6][0-9]|7[0-8]))|16(5[2-9]|[6-7][0-9])|50(0[0-9]|1[0-9]|2[1-9]|[3-4][0-9]|5[0-8]))/.test(value) || // Elo
+    /^(60\d{14})$/.test(value) || // Hipercard
+    /^3[47][0-9]{13}$/.test(value) // American Express
+  );
+}, "Por favor, insira um número de cartão válido.");
+
+getSession();
+
+let App =
+{
+    login: _ =>
+    {
+        let _loginSite = JSON.parse(localStorage.getItem("_loginSite"));
+        if(_loginSite != null)
+        {
+            $('input[name="email"]').val(_loginSite.email);
+            $('input[name="pass"]').val(_loginSite.pass);
+            $('input[name="remember"]').prop('checked', true);
+        }
+    },
+    checkout: _ =>
+    {
+        $('#card_number').mask('0000 0000 0000 0000');
+        $('#card_valid').mask('00/00');
+        $('#card_csv').mask('0009');
+
+        var SPMaskBehavior = function (val) {
+        return val.replace(/\D/g, '').length === 11 ? '(00) 00000-0000' : '(00) 0000-00009';
+        },
+        spOptions = {
+            onKeyPress: function(val, e, field, options) {
+              field.mask(SPMaskBehavior.apply({}, arguments), options);
+            }
+        };
+        $('#phone').mask(SPMaskBehavior, spOptions);
+        $('#card_phone').mask(SPMaskBehavior, spOptions);
+
+        var options = {
+            onKeyPress: function (cpf, ev, el, op) {
+                var masks = ['000.000.000-000', '00.000.000/0000-00'];
+                $('#cpf').mask((cpf.length > 14) ? masks[1] : masks[0], op);
+            }
+        }
+
+        $('#cpf').length > 11 ? 
+            $('#cpf').mask('00.000.000/0000-00', options) : 
+            $('#cpf').mask('000.000.000-00#', options);
+
+        $('#card_cpf').length > 11 ? 
+            $('#card_cpf').mask('00.000.000/0000-00', options) : 
+            $('#card_cpf').mask('000.000.000-00#', options);
+
+        $('input[name="card_number"]').on("keyup", function()
+        {
+            let brand = Util.validateCard($(this).val());
+            if(brand) $('input[name="brand"]').val(brand);
+        });
+        $('input[name="zipcode"]',document).mask('00000-000');
+        $('#personalzipcode').mask('00000-000');
+
+        $('input[name="card_number"]').on("keyup", function()
+        {
+            let brand = Util.validateCard($(this).val());
+            if(brand) $('input[name="brand"]').val(brand);
+        });
+
+        setTimeout(function(){
+            var itensCart = $('.checkout .itensCheckout li:not(.headlist)',document);
+            console.log(itensCart);
+            if(itensCart.length>0){
+                var val = 0;
+                var total = 0;
+                $.each(itensCart,function(i,v){
+                    console.log();
+                    val = $(v).find('div:eq(2):not(#totalCheckout)').text().substring(3).replace(/,/g, ".");
+                    if(!val.isNaN && val!=''){
+                        val = parseFloat(val);
+                        total += val;
+                    }
+                    console.log(val,total);
+                });
+                console.log(total);
+                total = total.replace(/./g, "");
+                $('#totalCheckout',document).text('R$ '+Util.number_format(total, 2, ',', '.'));
+
+
+            }
+        },300);
+    },
+    assinar: _ =>
+    {
+        $('#card_number').mask('0000 0000 0000 0000');
+        $('#card_valid').mask('00/00');
+        $('#card_csv').mask('0009');
+
+        var SPMaskBehavior = function (val) {
+        return val.replace(/\D/g, '').length === 11 ? '(00) 00000-0000' : '(00) 0000-00009';
+        },
+        spOptions = {
+            onKeyPress: function(val, e, field, options) {
+              field.mask(SPMaskBehavior.apply({}, arguments), options);
+            }
+        };
+        $('#phone').mask(SPMaskBehavior, spOptions);
+        $('#card_phone').mask(SPMaskBehavior, spOptions);
+
+        var options = {
+            onKeyPress: function (cpf, ev, el, op) {
+                var masks = ['000.000.000-000', '00.000.000/0000-00'];
+                $('#cpf').mask((cpf.length > 14) ? masks[1] : masks[0], op);
+            }
+        }
+
+        $('#cpf').length > 11 ? 
+            $('#cpf').mask('00.000.000/0000-00', options) : 
+            $('#cpf').mask('000.000.000-00#', options);
+        
+        $('#card_cpf').length > 11 ? 
+            $('#card_cpf').mask('00.000.000/0000-00', options) : 
+            $('#card_cpf').mask('000.000.000-00#', options);
+
+        $('input[name="card_number"]').on("keyup", function()
+        {
+            let brand = Util.validateCard($(this).val());
+            if(brand) $('input[name="brand"]').val(brand);
+        });
+        $('#zipcode').mask('00000-000');
+        $('#personalzipcode').mask('00000-000');
+
+        $('input[name="card_number"]').on("keyup", function()
+        {
+            let brand = Util.validateCard($(this).val());
+            if(brand) $('input[name="brand"]').val(brand);
+        });
+        
+    },
+    conta: _ =>
+    {
+        var SPMaskBehavior = function (val) {
+        return val.replace(/\D/g, '').length === 11 ? '(00) 00000-0000' : '(00) 0000-00009';
+        },
+        spOptions = {
+            onKeyPress: function(val, e, field, options) {
+              field.mask(SPMaskBehavior.apply({}, arguments), options);
+            }
+        };
+        $('#phone').mask(SPMaskBehavior, spOptions);
+
+        var options = {
+            onKeyPress: function (cpf, ev, el, op) {
+                var masks = ['000.000.000-000', '00.000.000/0000-00'];
+                $('#cpf').mask((cpf.length > 14) ? masks[1] : masks[0], op);
+            }
+        }
+
+        $('#cpf').length > 11 ? 
+            $('#cpf').mask('00.000.000/0000-00', options) : 
+            $('#cpf').mask('000.000.000-00#', options);
+
+        $('input[name="card_number"]').on("keyup", function()
+        {
+            let brand = Util.validateCard($(this).val());
+            if(brand) $('input[name="brand"]').val(brand);
+        });
+        $('#zipcode').mask('00000-000');
+        $('#birthday').mask('00/00/0000');
+    },
+    cadastro: _ =>
+    {
+        var SPMaskBehavior = function (val) {
+        return val.replace(/\D/g, '').length === 11 ? '(00) 00000-0000' : '(00) 0000-00009';
+        },
+        spOptions = {
+            onKeyPress: function(val, e, field, options) {
+              field.mask(SPMaskBehavior.apply({}, arguments), options);
+            }
+        };
+        $('#phone').mask(SPMaskBehavior, spOptions);
+
+        var options = {
+            onKeyPress: function (cpf, ev, el, op) {
+                var masks = ['000.000.000-000', '00.000.000/0000-00'];
+                $('#cpf').mask((cpf.length > 14) ? masks[1] : masks[0], op);
+            }
+        }
+
+        $('#cpf').length > 11 ? 
+            $('#cpf').mask('00.000.000/0000-00', options) : 
+            $('#cpf').mask('000.000.000-00#', options);        
+    },
+    carousel: _ =>
+    {
+        if($('#carouselProject').length>0){
+            setTimeout(function() {
+            var carousel = $('.carousel-inner').find('.carousel-item');
+            //console.log(carousel);
+            var firstItem = carousel[0];
+            $(firstItem).addClass('active');
+            },300);
+        }
+    }
+}
+
+App.carousel();
+
+let Util = {
+        validateCpf: value =>
+        {
+            var cpf = value.replace(/[^0-9]/g, '').toString();
+            if( cpf.length == 11 )
+            {
+                var v = [];
+
+                //Calcula o primeiro dígito de verificação.
+                v[0] = 1 * cpf[0] + 2 * cpf[1] + 3 * cpf[2];
+                v[0] += 4 * cpf[3] + 5 * cpf[4] + 6 * cpf[5];
+                v[0] += 7 * cpf[6] + 8 * cpf[7] + 9 * cpf[8];
+                v[0] = v[0] % 11;
+                v[0] = v[0] % 10;
+
+                //Calcula o segundo dígito de verificação.
+                v[1] = 1 * cpf[1] + 2 * cpf[2] + 3 * cpf[3];
+                v[1] += 4 * cpf[4] + 5 * cpf[5] + 6 * cpf[6];
+                v[1] += 7 * cpf[7] + 8 * cpf[8] + 9 * v[0];
+                v[1] = v[1] % 11;
+                v[1] = v[1] % 10;
+
+                //Retorna Verdadeiro se os dígitos de verificação são os esperados.
+                if ( (v[0] != cpf[9]) || (v[1] != cpf[10]) )
+                {
+                    return false;
+                }
+
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        },
+        validateCard: value =>
+        {
+            value = value.replaceAll(' ', '');
+            var cartoes = {
+                "Elo": /^4011(78|79)|^43(1274|8935)|^45(1416|7393|763(1|2))|^50(4175|6699|67[0-6][0-9]|677[0-8]|9[0-8][0-9]{2}|99[0-8][0-9]|999[0-9])|^627780|^63(6297|6368|6369)|^65(0(0(3([1-3]|[5-9])|4([0-9])|5[0-1])|4(0[5-9]|[1-3][0-9]|8[5-9]|9[0-9])|5([0-2][0-9]|3[0-8]|4[1-9]|[5-8][0-9]|9[0-8])|7(0[0-9]|1[0-8]|2[0-7])|9(0[1-9]|[1-6][0-9]|7[0-8]))|16(5[2-9]|[6-7][0-9])|50(0[0-9]|1[0-9]|2[1-9]|[3-4][0-9]|5[0-8]))/,
+                "Amex": /^3[47][0-9]{13}$/,
+                'Visa': /^4[0-9]{15}$/,
+                'Master': /^((5|2)[1-5]\d{4}|677189)\d{10}$/,
+                'Hiper': /^(606282\d{10}(\d{3})?)|(3841\d{15})$/,
+            };
+
+            for (var cartao in cartoes) 
+            { 
+                if (value.match(cartoes[cartao])) 
+                {
+                    let cardIcon = $('#cardIcon').val();
+                    $('#brandLogo').removeClass('d-none').attr('src', cardIcon+cartao+'.png');
+                    return cartao;
+                }
+            }
+            $('#brandLogo').addClass('d-none');
+            return false;
+        },
+        adjustModalBackdrop: _ =>
+        {
+            const modal = document.querySelector('.modal');
+            const backdrop = document.querySelector('.modal-backdrop');
+
+            modal.insertAdjacentElement('afterend', backdrop);
+        },
+        date_format: (date) =>
+        {
+            var p;
+            if(date.indexOf('-')>-1){
+                p = date.split('-');
+                date = p[2]+'/'+p[1]+'/'+p[0]; 
+            } else {
+                p = date.split('/');
+                date = p[2]+'-'+p[1]+'-'+p[0];
+            }
+            return date;
+        },
+        number_format: (number, decimals, decimalSeparator, thousandsSeparator) =>
+        {
+            number = parseFloat(number);
+            decimals = decimals || 0;
+            decimalSeparator = decimalSeparator || '.';
+            thousandsSeparator = thousandsSeparator || ',';
+
+            var roundedNumber = Math.round(Math.abs(number) * ('1e' + decimals)) + '';
+            var numbersString = decimals ? roundedNumber.slice(0, decimals * -1) : roundedNumber;
+            var decimalPortion = decimals ? roundedNumber.slice(decimals * -1) : '';
+            var formattedNumber = '';
+
+            while (numbersString.length > 3) 
+            {
+                formattedNumber = thousandsSeparator + numbersString.slice(-3) + formattedNumber;
+                numbersString = numbersString.slice(0, -3);
+            }
+
+            if (number < 0) 
+            {
+                formattedNumber = '-' + numbersString + formattedNumber + decimalSeparator + decimalPortion;
+            }
+             else 
+            {
+                formattedNumber = numbersString + formattedNumber + decimalSeparator + decimalPortion;
+            }
+
+            return formattedNumber;
+        },
+        countering: () =>
+        {
+            function counting(obj) { 
+                var next_session = obj.data('date');
+                time = next_session.split(',');
+                var countDownDate = new Date(parseInt(time[0]) ,parseInt(time[1])-1 ,parseInt(time[2]) ,parseInt(time[3]) ,parseInt(time[4]) ,parseInt(time[5])).getTime();
+                var now = 0, distance = 0, days = 0, hours = 0, minutes = 0, seconds = 0;
+                var x = setInterval(function() {
+                    now = new Date().getTime(); 
+                    distance = countDownDate - now;
+                    days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                    hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                    seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                    if(days<10) days = '0'+days;
+                    if(hours<10) hours = '0'+hours;
+                    if(minutes<10) minutes = '0'+minutes;
+                    if(seconds<10) seconds = '0'+seconds;
+                    if(days<0) days = 0;
+                    if(hours<0) hours = 0;
+                    if(minutes<0) minutes = 0;
+                    if(seconds<0) seconds = 0;
+                    obj.find('.count_d').text(days);
+                    obj.find('.count_h').text(hours);
+                    obj.find('.count_m').text(minutes);
+                    obj.find('.count_s').text(seconds);
+                }, 1000);
+            }
+            var countering_boxs = $('.countering',document);
+            if(countering_boxs.length>0) countering_boxs.each(function(){ counting($(this)); });
+        },
+        iframeAdjust: () =>
+        {
+            $("iframe").each(function(i) { 
+                var that = $(this);
+                var link = that.attr('src');
+                that.removeAttr('height');
+                if(link!==undefined){
+                    if(link.indexOf('instagram') != -1){
+                        that.addClass('instagram-video'); 
+                    } else {
+                        that.addClass('youtube-video'); 
+                    }
+                }
+            });
+        },
+        removeStyleClass: (clas, prop) => {
+            var elm = document.getElementsByClassName(clas);
+            elm.style.cssText = elm.style.cssText.split('; ') .filter(p => !p.startsWith(prop) ).join(';');
+        },
+        removeTagStyle: (obj, prop) => {
+            var content = document.getElementById('content');
+            var elm = content.getElementsByTagName(obj);
+            for (var i = 0; i < elm.length; i++) {
+                if(elm[i].style.cssText!='') { elm[i].style.cssText = elm[i].style.cssText.split('; ').filter(p => !p.startsWith(prop)).join(';'); }
+            }
+        },
+        fixedReward: _ => 
+        {
+            
+            window.addEventListener('load', function() {
+                var w = $('#content').height();
+                $('.new-rewards').height(w+125);
+            })
+
+        },
+        seeMore: _ => 
+        {
+            var boxRewards = $('.rewards-list');
+            if(boxRewards.length>0){
+                var allRewards = boxRewards.find('li');
+                var _p='';
+                console.log(allRewards);
+                allRewards.each(function(){
+                    _p = $(this).find('.desc');
+                    _h = _p.height();
+                    console.log(_h);
+                    if(_h>70){
+                        _p.append('<i class=""><small>...leia mais</small></i>');
+                        _p.css({'height':'80px','margin-bottom':'5px'});
+                    }
+               });
+            }
+
+            $(document).on('click', '.desc small', function(){
+                var that = $(this);
+                that.closest('.desc').css({'height':'initial','margin-bottom':'25px'});
+                setTimeout(function(){
+                    that.remove();
+                },300);
+                
+            });
+
+
+        },
+        imgsLoad: () => 
+        {
+            function lazyload() {
+                const lazyLoadImages = document.querySelectorAll("img[data-src]:not(.not-lazy)");
+                const imageObserver = new IntersectionObserver((entries, observer) => {
+                    entries.forEach((entry) => {
+                        if (entry.isIntersecting) {
+                            const lazyImage = entry.target;
+                            lazyImage.src = lazyImage.dataset.src;
+                            imageObserver.unobserve(lazyImage);
+                        }
+                    });
+                });
+                lazyLoadImages.forEach((lazyImage) => {
+                    imageObserver.observe(lazyImage);
+                });
+            }
+            document.addEventListener("DOMContentLoaded", lazyload);   
+        }   
+}
+
+Util.fixedReward();
+Util.seeMore();
+Util.imgsLoad();
+
+try { eval('App.'+cPage()+'()'); } catch(err){ 
+    //console.log(err.message); 
+}
+
+var dataCountdown = $('[data-counter]',document);
+if(dataCountdown.length>0){
+    let countdown = dataCountdown.data('counter');
+    console.log(countdown);
+    time = countdown.split(',');
+    var countDownDate = new Date(parseInt(time[0]) ,parseInt(time[1])-1 ,parseInt(time[2]) ,parseInt(time[3]) ,parseInt(time[4]) ,parseInt(time[5])).getTime();
+    var x = setInterval(function() {
+        var now = new Date().getTime(); 
+        var distance = countDownDate - now;
+        var days = Math.floor(distance / (1000 * 60 * 60 * 24));
+        var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        //var hours = Math.floor((distance % (3600000)));
+        hours = (days*24)+hours;
+        var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        var seconds = Math.floor((distance % (1000 * 60)) / 1000);
+        if(days<0) days = 0;
+        if(hours<0) hours = 0;
+        if(minutes<0) minutes = 0;
+        if(seconds<0) seconds = 0;
+        if(hours<10) hours = '0'+hours;
+        if(minutes<10) minutes = '0'+minutes;
+        if(seconds<10) seconds = '0'+seconds;
+        console.log(days+' '+hours+' '+minutes+' '+seconds);
+        dataCountdown.text(hours+':'+minutes+':'+seconds);
+        if(hours+':'+minutes+':'+seconds=='00:00:00') location.reload();
+    }, 1000);
+
+}
+
+var numField = $('[name="amount"]');
+if(numField.length>0) $('[name="amount"]').mask('000');
+
+//Util.removeStyleClass('')
+//console.log(link);
+if(cPage==''&&_params[3]!=''){
+    if($('p').length>0)  Util.removeTagStyle('p','font-family');
+    if($('span').length>0) Util.removeTagStyle('span','font-family');
+}
+
+var projetoSlideShow = $('.projeto-slideshow',document);
+if(projetoSlideShow.length>0){
+    $('.projeto-slideshow').slick({
+        autoplay: true,
+        autoplaySpeed: 7000,
+        arrows: false,
+        dots: true,
+        pauseOnFocus: true,
+        pauseOnHover: true,
+        pauseOnDotsHover: true
+    });
+}
+
+var input = document.querySelector('input[name=tags]');
+new Tagify(input);
+
+// Ativação de tooltips
+const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+const tooltipList = [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
+
+
+$('.reply-comment').on('click', function(e){
+    e.preventDefault();
+    let rowComentario = $(this).closest('.comentario');
+    let comentarioRespostaForm = rowComentario.find('.comentario-resposta-form');
+    comentarioRespostaForm.toggle();
+});
+
+$('.reply-ask').on('click', function(e){
+    e.preventDefault();
+    let rowComentario = $(this).closest('.resposta');
+    let comentarioRespostaForm = rowComentario.find('.comentario-resposta-form');
+    comentarioRespostaForm.toggle();
+});
+
+$('button#sendToAprove').on('click', function (e){
+    e.preventDefault();
+
+    $.ajax(
+    {
+        type: "POST",
+        url: $(this).data('url'),
+        dataType: "json",
+        beforeSend: function (load) {
+            ajax_load('open');
+        },
+        success: function (data) {
+            ajax_load('close');
+            new Toast(data.title, data.text, data.type);
+
+            if (data.config.reset)
+                form.reset();
+
+            if(data.config.refrash)
+                window.location.reload();
+        }
+    });
+}) 
+
+var categoriesSlideshow = $('.categoriesSlideshow');
+if (categoriesSlideshow.length > 0) {
+    categoriesSlideshow.slick({
+        slidesToShow: 5,
+        slidesToScroll: 1,
+        infinite: false,
+        autoplay: true, 
+        autoplaySpeed: 7000,
+        arrows: true,
+        dots: false,
+        pauseOnFocus: true,
+        pauseOnHover: true,
+        pauseOnDotsHover: true,
+        centerMode: false,
+        variableWidth: false,
+        centerPadding: '194px',
+        responsive: [
+            {
+                breakpoint: 1441,
+                settings: {
+                    slidesToShow: 4
+                }
+            },
+            {
+                breakpoint: 1281,
+                settings: {
+                    slidesToShow: 3
+                }
+            },
+            {
+                breakpoint: 960,
+                settings: {
+                    slidesToShow: 1
+                }
+            },
+            {
+                breakpoint: 415,
+                settings: {
+                    slidesToShow: 1
+                }
+            }
+        ]
+    });
+}
+
+
+var slidesPerView = 4;
+var spaceBetween = 30;
+if(winWidth<=1440) { slidesPerView = 3; spaceBetween = 25; }
+if(winWidth<=992) { slidesPerView = 2; spaceBetween = 20; }
+if(winWidth<=440) { slidesPerView = 1; spaceBetween = 20; }
+
+if($('.swiper').length>0){
+    var swiper = new Swiper(".swiper", {
+        slidesPerView: slidesPerView,
+        spaceBetween: spaceBetween,
+        freeMode: true,
+        loop: true,
+        pagination: {
+            el: ".swiper-pagination",
+            clickable: true,
+        },
+        navigation: {
+            nextEl: '.swiper-button-next',
+            prevEl: '.swiper-button-prev',
+        }
+    });
+}
+
+setTimeout(function(){
+    var catSlide1 = $('.categoria01-slideshow');
+    if (catSlide1.length>0) { catSlide1.slick('slickSetOption',{ prevArrow: $(".cat-01-prev"), nextArrow: $(".cat-01-next") }, true); }
+    var catSlide2 = $('.categoria02-slideshow');
+    if (catSlide2.length>0) { catSlide2.slick('slickSetOption',{ prevArrow: $(".cat-02-prev"), nextArrow: $(".cat-02-next") }, true); }
+    var catSlide3 = $('.categoria03-slideshow');
+    if (catSlide3.length>0) { catSlide3.slick('slickSetOption',{ prevArrow: $(".cat-03-prev"), nextArrow: $(".cat-03-next") }, true); }
+    var catSlide4 = $('.categoria04-slideshow');
+    if (catSlide4.length>0) { catSlide4.slick('slickSetOption',{ prevArrow: $(".cat-04-prev"), nextArrow: $(".cat-04-next") }, true); }
+    var catSlide5 = $('.categoria05-slideshow');
+    if (catSlide5.length>0) { catSlide5.slick('slickSetOption',{ prevArrow: $(".cat-05-prev"), nextArrow: $(".cat-05-next") }, true); }
+    var catSlide6 = $('.categoria06-slideshow');
+    if (catSlide6.length>0) { catSlide6.slick('slickSetOption',{ prevArrow: $(".cat-06-prev"), nextArrow: $(".cat-06-next") }, true); }
+    var catSlide7 = $('.categoria07-slideshow');
+    if (catSlide7.length>0) { catSlide7.slick('slickSetOption',{ prevArrow: $(".cat-07-prev"), nextArrow: $(".cat-07-next") }, true); }
+}, 1000);
+
+/*
+if ($('.categoria02-slideshow').length > 0) {
+    $('.categoria02-slideshow').slick({
+        slidesToShow: 5,
+        infinite: true,
+        autoplay: true,
+        autoplaySpeed: 7000,
+        arrows: true,
+        prevArrow: $(".cat-02-prev"),
+        nextArrow: $(".cat-02-next"),
+        dots: false,
+        pauseOnFocus: true,
+        pauseOnHover: true,
+        pauseOnDotsHover: true,
+        responsive: [
+            {
+                breakpoint: 1441,
+                settings: {
+                    slidesToShow: 4,
+                }
+            },
+            {
+                breakpoint: 1281,
+                settings: {
+                    slidesToShow: 3,
+                }
+            },
+            {
+                breakpoint: 811,
+                settings: {
+                    slidesToShow: 2,
+                }
+            },
+            {
+                breakpoint: 415,
+                settings: {
+                    slidesToShow: 1,
+                }
+            }
+        ]
+    });
+}
+
+if ($('.categoria03-slideshow').length > 0) {
+    $('.categoria03-slideshow').slick({
+        slidesToShow: 5,
+        infinite: true,
+        autoplay: true,
+        autoplaySpeed: 7000,
+        arrows: true,
+        prevArrow: $(".cat-03-prev"),
+        nextArrow: $(".cat-03-next"),
+        dots: false,
+        pauseOnFocus: true,
+        pauseOnHover: true,
+        pauseOnDotsHover: true,
+        responsive: [
+            {
+                breakpoint: 1441,
+                settings: {
+                    slidesToShow: 4,
+                }
+            },
+            {
+                breakpoint: 1281,
+                settings: {
+                    slidesToShow: 3,
+                }
+            },
+            {
+                breakpoint: 811,
+                settings: {
+                    slidesToShow: 2,
+                }
+            },
+            {
+                breakpoint: 415,
+                settings: {
+                    slidesToShow: 1,
+                }
+            }
+        ]
+    });
+}
+*/
+
+var followForm = $('#follow-form');
+var followForm_obj = document.getElementById("form");
+var modalFollow = $('.modal-follow');
+
+$('.open-modal-follow').on('click',function(e){ e.preventDefault(); modalFollow.addClass('on'); });
+modalFollow.find('.fa-x').on('click',function(e){ modalFollow.removeClass('on'); });
+
+if(followForm.length>0){
+    followForm.on('submit',function(e){
+        e.preventDefault();
+        var data = $(this).serialize();
+        console.log(data);
+        var action = followForm.data('action');
+        $.ajax({
+            url: action,
+            type: 'POST',
+            data: data,
+            //dataType: "json",
+            beforeSend: function (load) {
+                ajax_load('open');
+            },
+            success: function (data) {
+                data = jQuery.parseJSON(data);
+                console.log(data);
+                ajax_load('close');
+                new Toast(data.title, data.text, data.type);
+                modalFollow.removeClass('on');
+            }
+        });
+    });
+}
+
+function updateRewards(){
+    $('.rewards .backer').html('Adicionar ao Carrinho <i class="fa fa-plus"></i>');
+}
+
+var iModal = $('.iModal.iModalLogin');
+
+function iModalReset(){
+    iModal.find('main.container').hide(); 
+    setTimeout(() => { iModal.find('.iModalFormLogin').show(); }, 150);
+}
+
+$(document).on('click','.call-login',function(e){ 
+    e.preventDefault(); 
+    iModal.addClass('on'); 
+    var that = $(this);
+    if(that.hasClass('and-follow')){
+        $('.iModalFormLogin form')
+            .attr('data-project_id',that.data('id'))
+            .attr('data-project_urlfollow',that.data('url'));
+        $('.iModalFormSingin form')
+            .attr('data-project_id',that.data('id'))
+            .attr('data-project_urlfollow',that.data('url'));
+    }
+});
+
+$(document).on('click','.call-follow',function(e){ 
+    e.preventDefault(); 
+    var project_id = $(this).data('id');
+    var url = $(this).data('url');
+    clickFollowProject(project_id,url,true);
+    let data_follow = {
+        project_id: project_id,
+        project_name: $('.project-titles h1').text(),
+    }
+    analyticsFollow(data_follow);
+});
+
+$(document).on('click','.call-forget',function(e){ 
+    e.preventDefault(); 
+    iModal.find('main.container').hide(); 
+    setTimeout(() => { iModal.find('.iModalFormForget').show(); }, 150);
+}); 
+
+$(document).on('click','.call-singin',function(e){ 
+    e.preventDefault(); 
+    iModal.find('main.container').hide(); 
+    var that = $(this);
+    var that_email = that.closest('form').find('[name="email"]').val();
+    var that_pass = that.closest('form').find('[name="pass"]').val();
+    $('.iModalFormSingin').find('[name="email"]').val(that_email);
+    $('.iModalFormSingin').find('[name="pass"]').val(that_pass);
+    setTimeout(() => { 
+        iModal.find('.iModalFormSingin').show(); 
+    }, 150);
+});
+
+$('.call-back').on('click',function(e){  e.preventDefault(); iModalReset(); });
+
+$('.iModal .default > span').on('click',function(){ iModal.removeClass('on'); iModalReset(); });
+
+$('.iModalFormLogin form').on('submit',function(e){
+    e.preventDefault();
+    console.log($(this));
+    var fieldEmail = $(this).find('[name="email"]');
+    var valFieldEmail = fieldEmail.val();
+    var fieldPass = $(this).find('[name="pass"]');
+    var valFieldPass = fieldPass.val();
+    var validate = true;
+
+    var project_id = $(this).data('project_id');
+    var project_urlfollow = $(this).data('project_urlfollow');
+        
+    if(valFieldEmail.length<5 || valFieldEmail.indexOf('@')<0 || valFieldEmail.indexOf('.')<0){
+         validate = false;
+         fieldEmail.css('border-color','red');
+    } else {
+        fieldEmail.css('border-color',' #ced4da');
+    }
+    if(valFieldPass.length<3){ 
+        validate = false;
+        fieldPass.css('border-color','red');
+    } else {
+        fieldPass.css('border-color',' #ced4da');
+    }
+    if(validate) {
+        var data = $(this).serialize();
+        var url_form = $(this).attr('action');
+        var url_head = $(this).data('head');
+        var url_actual = $(this).data('url');
+        localStorage.setItem('urlAfterLogin', url_actual);
+        $.ajax({
+            url: url_form,
+            type: 'POST',
+            data: data,
+        beforeSend: function (load) { ajax_load('open'); }
+        }).done(function(data){
+            console.log(data);
+            data = jQuery.parseJSON(data);
+            console.log(data);
+            ajax_load('close');
+            new Toast(data.title, data.text, data.type);
+            iModal.removeClass('on');
+            if(data.type=='success'){
+                setTimeout(() => {
+                    $.get(url_head, function(data, status){
+                        if(status=='success'){
+                            $('nav').remove();
+                            $(data).insertAfter('.loading');
+                            setTimeout(() => { $('.loading').fadeOut(); }, 100);
+                        }
+                    });
+                }, 150);
+                localStorage.setItem('triggerUrl',url);
+                $('.call-login').find('.backer').attr('onclick','addToCart($(this))');
+                $('.call-login').addClass('call-follow').removeClass('call-login');
+                if((typeof project_id !== 'undefined' && project_id !== false) && (typeof project_urlfollow !== 'undefined' && project_urlfollow !== false)){
+                    setTimeout(() => { clickFollowProject(project_id,project_urlfollow,false);}, 300);
+                }
+                updateRewards();
+
+            }
+        });
+    }
+})
+
+$('.iModalFormForget form').on('submit',function(e){
+    e.preventDefault();
+    var fieldEmail = $(this).find('[name="email"]');
+    var valFieldEmail = fieldEmail.val();
+    var validate = true;
+    if(valFieldEmail.length<5 || valFieldEmail.indexOf('@')<0 || valFieldEmail.indexOf('.')<0){
+         validate = false;
+         fieldEmail.css('border-color','red');
+    } else {
+        fieldEmail.css('border-color',' #ced4da');
+    }
+    if(validate) {
+        var data = $(this).serialize();
+        var url_form = $(this).attr('action');
+        var url_actual = $(this).data('url');
+        localStorage.setItem('urlAfterForget', url_actual);
+        $.ajax({
+            url: url_form,
+            type: 'POST',
+            data: data,
+        beforeSend: function (load) { ajax_load('open'); }
+        }).done(function(data){
+            console.log(data);
+            data = jQuery.parseJSON(data);
+            console.log(data);
+            ajax_load('close');
+            new Toast(data.title, data.text, data.type);
+            iModal.removeClass('on');
+            iModalReset();
+        });
+    }
+});
+
+$('.iModalFormSingin form').on('submit',function(e){
+    e.preventDefault();
+    var fieldEmail = $(this).find('[name="email"]');
+    var valFieldEmail = fieldEmail.val();
+    var fieldPass = $(this).find('[name="pass"]');
+    var valFieldPass = fieldPass.val();
+
+
+    var fieldCheckTextarea = $(this).find('[name="internacional"]');
+    var fieldTextarea = $(this).find('[name="internacional_address"]');
+    var valFieldTextarea = fieldTextarea.val();
+
+
+    var validate = true;
+
+    var project_id = $(this).data('project_id');
+    var project_urlfollow = $(this).data('project_urlfollow');
+
+
+    if(valFieldEmail.length<5 || valFieldEmail.indexOf('@')<0 || valFieldEmail.indexOf('.')<0){
+         validate = false;
+         fieldEmail.css('border-color','red');
+    } else {
+        fieldEmail.css('border-color',' #ced4da');
+    }
+    if(valFieldPass.length<5){ 
+        validate = false;
+        fieldPass.css('border-color','red');
+    } else {
+        fieldPass.css('border-color',' #ced4da');
+    }
+    if(fieldCheckTextarea.is(':checked')&&valFieldTextarea.length<5){
+        validate = false;
+        fieldTextarea.css('border-color','red');
+    } else {
+        fieldTextarea.css('border-color',' #ced4da');
+    }
+    if(validate) {
+        var data_serialize = $(this).serialize();
+        var url_form = $(this).attr('action');
+        var url_actual = $(this).data('url');
+        var url_head = $(this).data('head');
+        var url_login = $(this).data('urllogin');
+        localStorage.setItem('urlAfterSingin', url_actual);
+        $.ajax({
+            url: url_form, 
+            type: 'POST',
+            data: data_serialize,
+        beforeSend: function (load) { ajax_load('open'); }
+        }).done(function(data){
+            console.log(data);
+            data = jQuery.parseJSON(data);
+            console.log(data);
+            ajax_load('close');
+            new Toast(data.title, data.text, data.type);
+            iModal.removeClass('on');
+            iModalReset();
+            if(data.type=='success'){
+                $.ajax({
+                    url: url_login,
+                    type: 'POST',
+                    data: data_serialize,
+                beforeSend: function (load) { ajax_load('open'); }
+                }).done(function(data){
+                    console.log(data);
+                    data = jQuery.parseJSON(data);
+                    ajax_load('close');
+                    setTimeout(() => {
+                        $.get(url_head, function(data, status){
+                            if(status=='success'){
+                                $('nav').remove();
+                                $(data).insertAfter('.loading');
+                            }
+                        });
+                    }, 150);  
+                    $('.call-login').find('.backer').attr('onclick','addToCart($(this))');
+                    $('.call-login').addClass('call-follow').removeClass('call-login');  
+                    if((typeof project_id !== 'undefined' && project_id !== false) && (typeof project_urlfollow !== 'undefined' && project_urlfollow !== false)){
+                        setTimeout(() => { clickFollowProject(project_id,project_urlfollow,false);}, 300);
+                    }
+                });
+                updateRewards();
+            }
+        });
+    }
+});
+
+$('.video-carousel i').on('click',function(){
+    var link_video = $(this).closest('.video-carousel').find('img').data('link'); 
+    $('.modal-video iframe').attr('src','https://www.youtube.com/embed/'+link_video+'?autoplay=1');
+    setTimeout(() => {
+        $('.iModal.modal-video').addClass('on');
+    }, 300);
+});
+
+$('.iModal').on('click',function(e){
+    console.log(e.target.className);
+    if(e.target.className){ 
+        $('.iModal.modal-video').removeClass('on');
+        $('.modal-video iframe').attr('src','');
+    }
+});
+
+$('.modal-video .on-video > span').on('click',function(){
+    $('.iModal.modal-video').removeClass('on');
+    $('.modal-video iframe').attr('src','');
+});
+
+//if(cPage=='checkout' || cPage=='assinar'){
+    /*
+    var myCarousel = document.querySelector('#carouselCards')
+    var carousel = new bootstrap.Carousel(myCarousel, {interval: 500, wrap: true})
+    var slides = document.querySelectorAll('.carousel .carousel-item')
+
+    slides.forEach((el) => {
+        // number of slides per carousel-item
+        const minPerSlide = slides.length
+        let next = el.nextElementSibling
+        for (var i=1; i<minPerSlide; i++) {
+            if (!next) {
+                // wrap carousel by using first child
+                next = slides[0]
+            }
+            let cloneChild = next.cloneNode(true)
+            el.appendChild(cloneChild.children[0])
+            next = next.nextElementSibling
+        }
+    });
+    */
+    $(document).on('click','.carouselCards ._card button',function(){
+        console.log($(this));
+        var that = $(this);
+        var _input = that.closest('div').find('[type="radio"]');
+        that.closest('.carouselCards').find('._card').addClass('noopacity');
+        setTimeout(function(){
+            if(_input.prop('checked')){ 
+                _input.prop("checked", false);
+                that.closest('._card').addClass('noopacity');
+                that.hide();
+                that.closest('._card').find('.select').show();
+                $('.addCardInfo').show();
+             } else {
+                 _input.prop("checked", true);
+                 that.closest('._card').removeClass('noopacity');
+                 that.hide();
+                 that.closest('._card').find('.selected').show();
+                 $('.addCardInfo').hide();
+             }
+        },15);
+    });
+//}
+
+$(document).on('click','.addNewCard',function(){
+    $('.addCardInfo').show();
+    $('._card').addClass('noopacity');
+    $('._card [type="radio"]').prop("checked", false);
+    $('._card .select').show();
+    $('._card .selected').hide();
+});
+
+$(document).on('click','.buttonAddAddress',function(){
+    $('input[name="card_zipcode"]').val($('input[name="user_zipcode"]').val());
+    $('input[name="card_address"]').val($('input[name="user_address"]').val());
+    $('input[name="card_addressnumber"]').val($('input[name="user_addressnumber"]').val());
+    $('input[name="card_complement"]').val($('input[name="user_complement"]').val());
+    $('input[name="card_district"]').val($('input[name="user_district"]').val());
+    $('input[name="card_city"]').val($('input[name="user_city"]').val());
+    //$('input[name="card_state"]').val($('input[name="user_state"]').val());
+    $('select[name="card_state"] option[value="'+($('select[name="user_state"]').val())+'"]').prop('selected','selected');
+});
+
+$('[name="pay_type"]').on('change',function(){
+    if($(this).val()=='card'){
+        $('.cardinfos').show();
+    } else {
+        $('.cardinfos').hide();
+    }
+});
+
+
+$('.carouselCards').slick({
+    slidesToShow: 1,
+    slidesToScroll: 1,
+    infinite: false,
+    dots: true,
+    arrows: false,
+    centerMode: true,
+    focusOnSelect: true,
+    centerPadding: '90px',
+    responsive: [
+        {
+            breakpoint: 992,
+            settings: {
+                centerPadding: '40px'
+            }
+        }
+    ]
+});
+
+function getUpdatedValue(){
+    var project_id = $('[name="project_id"]',document).val();
+    var price = $('.project .price h3',document);
+    var percent = $('.project .price span',document);
+    var percentbar = $('.project .progress.progress-internal > div',document);
+    var supports = $('.project .amount div:eq(2) b',document);
+    var supportters = $('.project .amount div:eq(1) b',document);
+    //console.log(price);
+    if(project_id!='' && project_id!==undefined){
+        let data = {
+            'id': project_id
+        };
+        //console.log(data);
+        $.ajax({
+            url: link+'getTotalsProject',
+            type: 'POST',
+            data: data,
+        beforeSend: function (load) { /*ajax_load('open');*/ }
+        }).done(function(data){
+            data = jQuery.parseJSON(data);
+            //console.log(data);
+            var dataValueReached = data.valueReached;
+            if(valueReached==0) valueReached = '0,00';
+            if(localStorage.getItem("valueReached")!=dataValueReached){
+                var valueReached = (Util.number_format(dataValueReached,2, ',','.')).split(',');
+                var _html = '<small>R$ </small> '+valueReached[0]+'<small>,'+valueReached[1]+'</small>';
+                price.html(_html).addClass('blink');
+                var valuePercent = data.percentageReached;
+                percent.html(valuePercent+'%').addClass('blink');
+                percentbar.css('width',valuePercent+'%').attr('aria-valuenow','85');
+                supports.html(data.countSupports).addClass('blink');
+                supportters.html(data.countSupportters).addClass('blink');
+                setTimeout(() => { 
+                    price.removeClass('blink'); 
+                    percent.removeClass('blink');
+                    supports.removeClass('blink');
+                    supportters.removeClass('blink');
+                }, 500);
+            }
+            localStorage.setItem("valueReached", dataValueReached);
+        });
+    }
+}
+if($('.project .progress.progress-internal').length>0 && cPage()!=''){
+    var updateValueProject = setInterval(function() { getUpdatedValue(); }, 1000*30);
+}
+
+
+
+$('.iModal .default main .internacional-checkbox input').on('change',function(){
+    var textarea = $('.iModal .default main .internacional-checkbox textarea',document);
+    ($(this).is(':checked')) ? textarea.attr('checked','checked') : textarea.attr('checked','');
+})
+
+
+//}
+
+
+$('#formInternacionalPay').on('submit',function(e){
+    e.preventDefault(); 
+    $('#alert').modal('show');
+    var that = $(this);
+    var _url = that.data('url');
+    var data = that.serialize();
+    $.ajax({
+        url: _url,
+        type: 'POST',
+        data: data,
+        beforeSend: function (load) {
+            ajax_load('open');
+        },
+    }).done(function(data){
+        data = jQuery.parseJSON(data);
+        //console.log(data);
+        ajax_load('close');
+        if(data.config.success){
+            that.find('.body-international').hide();
+            that.find('.finalize-internacional').show();
+        } else {
+            new Toast(data.title, data.text, data.type);
+        }
+    });
+});
+
+
+
+function countPageViews(){
+    var userAgent = window.navigator.userAgent;
+    var isBot = false;
+    if(userAgent.includes('bot')) isBot = true;
+    if(userAgent.includes('crawl')) isBot = true;
+    if(userAgent.includes('spider')) isBot = true;
+    if(userAgent.length<55) isBot = true;
+    console.log('isBot',isBot);
+    var project_id = '',category_id = '',news_id = '';
+    if($('[data-main_project_id]').length>0) project_id =  $('[data-main_project_id]').data('main_project_id');
+    if($('[data-main_category_id]').length>0) category_id =  $('[data-main_category_id]').data('main_category_id');
+    if($('[data-main_news_id]').length>0) news_id =  $('[data-main_news_id]').data('main_news_id');
+    
+    function resetLocalStorageURLs(){ localStorage.removeItem('arrayURLs'); }
+    
+    if(isBot==false && (project_id!=''||category_id!=''||news_id!='')){
+        const pathJS = window.location.pathname;
+        const referrer = window.location.search;
+        const currentTime = Date.now();
+        const _24h = 24 * 60 * 60 * 1000;
+        const _48h = 48 * 60 * 60 * 1000;
+        var inArray = false;
+        var lastAccess = localStorage.getItem("lastAccess") || 0;
+        if(currentTime -  lastAccess >= _48h) resetLocalStorageURLs();
+        var arrayURLs =  JSON.parse(localStorage.getItem("arrayURLs")) || [];
+        function savePageview(){
+            //var lastURL = localStorage.getItem('referrerPath');
+            let data = {
+                'project_id': project_id,
+                'category_id': category_id,
+                'news_id': news_id,
+                'path_js': pathJS, 
+                'referrer_js': document.referrer,
+                'referrer': referrer
+            };
+            console.log(data);
+            $.ajax({
+                url: link+'contabilizeVisit',
+                type: 'POST',
+                data: data
+            }).done(function(data){
+                data = jQuery.parseJSON(data);
+                console.log(data);
+            });
+        }
+        arrayURLs.forEach(function(item, i) {
+            //console.log(i, item);
+            if(item.url==pathJS+referrer){
+                if(currentTime -  item.datetime >= _24h){ 
+                    savePageview();
+                    arrayURLs[i]['datetime'] = currentTime;
+                }
+                inArray = true;
+            }
+        });
+        if(!inArray){
+            arrayURLs.push({
+                url: pathJS+referrer,
+                datetime: currentTime
+            });
+            savePageview();
+        }    
+        localStorage.setItem("arrayURLs", JSON.stringify(arrayURLs));
+        //const lastTime = localStorage.getItem("lastTime");
+        localStorage.setItem('referrerPath', window.location.pathname);
+        console.log(localStorage);
+        localStorage.setItem('lastAccess', currentTime);
+    }
+    
+}
+countPageViews();

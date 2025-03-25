@@ -1,0 +1,78 @@
+@media (max-width: 1920px){}
+@media (max-width: 1367px){
+   .project .carousel,
+   .project .infos {  height: 420px; min-height: auto; } 
+   .swiper { padding-right: 160px; }
+   .home .cartao-projeto .projeto-lancamento p:nth-child(2) { font-size: 1.2rem; }
+   .project .infos .actions button.backer { padding: 8px 16px; margin-top: 5px !important; }
+}
+@media (max-width: 1280px){
+   #carouselMain, #carouselMain .carousel-item {  max-height: 70vh; }
+   main.main_content .project main { min-height: initial; margin-bottom: 40px; }
+   .home .cartao-projeto .projeto-titulo h3 { font-size: 0.92rem; }
+}
+@media (max-width: 992px){
+   nav .logo { margin-top: 5px; }
+   #carouselMain .carousel-item img {  position: relative;  top: initial; left: initial; transform: initial; }
+   #carouselMain, #carouselMain .carousel-item { max-height: initial; height: initial; }
+   .categoriesSlideshow .slick-slide { margin-right: 0.8rem; margin-left: 0.8rem; }
+   .project .project-titles { margin-bottom: 15px;; }
+   .project .infos { height: auto; min-height: 470px; }
+   .project .infos.pre-campaign .price h3 { font-size: 24px; }
+   .project .carousel { min-height: auto; } 
+   main.main_content main { padding-top: 100px; }
+   .rewards.rewards-list li > div > * { max-width: 100%; }
+   .rewards { padding: 0px; }
+   .rewards li { padding: 20px 0px; }
+   .rewards .reward-infos > .delivery-info { padding-right: 0px; }
+   .rewards li div:nth-child(5) { width: 132px; }
+   .rewards li div:nth-child(6) { width: calc(100% - 132px); padding: 0; }
+   .rewards li .amount { width: 28%; }
+   .rewards li .reward-infos span b { width: 22%; margin-left: 10px; }
+   .rewards li span input { margin: 0 5px; }
+   .rewards li .amount > i { width: 22px; height: 22px; line-height: 18px !important; background: var(--green-primary); color: #FFF; font-size: 16px; margin-top: 5px; }
+   .rewards li .reward-infos span b { width: 26%; margin-left: 5px; font-size: 0.9rem; }
+   .project .content .rewards.all > li a, .rewards > li { margin-bottom: .15rem!important; }
+   .swiper { padding-right: 120px; }
+   .project .infos .amount { font-size: 1.8rem; }
+   .project .infos .amount .flex-fill { min-height: 50px; }
+   .project-ending { padding: 0 10px; }
+}  
+@media (max-width: 768px){
+   .swiper { padding-right: 80px; }
+   .cartao-projeto .projeto-valor { font-size: 1.3rem; }
+   .home .cartao-projeto:hover { top: 0; transform: initial; }
+   .sidebar { position: relative; }
+   .search-box { width: 100%; position: absolute; top: 75px; background: #000; padding-right: 20px; padding-left: 5px; padding: 10px 5px 15px 5px;  box-shadow: 0 5px 5px rgba(0, 0, 0, .12) }
+   .search-box-show { display: flex!important; }
+   .search-icon-highlight { background: #333; }
+   .search-box form { width: 100%; }
+   .checkout.recurrent .resume p { padding: 0; }
+   .box-white.search-box { background: #fff; }
+   .box-white .search-icon-highlight { background: #ccc; }
+}
+@media (max-width: 440px){
+   nav { min-height: 92px; }
+   nav .logo { max-width: 160px;  }
+   .project .carousel {  height: 208px; min-height: auto; }
+   .project .infos .amount .flex-fill { 
+      background-size: 36%!important; 
+      background-position: 4px 3px !important; 
+   }
+   .project .nav li a { font-size: 12px; margin-right: 15px; }
+   .project .nav li { float: left; width: 50%; }
+   .swiper { padding-right: 30px; }
+   .swiper-backface-hidden .swiper-slide { min-width: 306px; }
+   #carouselMain .carousel-item button { font-size: 0.75rem; line-height: 1.1rem; padding: 12px 25px; }
+   .home .categoria .cat-titulo h2 { color: #fff; font-size: 1.1rem; margin-bottom: 0px; font-weight: 500; }
+   .home .categoria .cat-titulo .cat-botao { font-size: 0.7rem; }
+   .iModal .default main .internacional-checkbox textarea { min-height: 72px; }
+}
+@media (max-width: 360px){
+
+   .project .infos .price h3 { font-size: 28px; }
+   .project .infos .price span { font-size: 28px; top: -6%; }
+   .project .infos .amount .flex-fill { padding-left: 24px; }
+   .project .infos .actions button.backer { font-size: 1rem; }
+   .project .infos { min-height: 420px; }
+}
