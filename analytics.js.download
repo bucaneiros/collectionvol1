@@ -1,0 +1,147 @@
+if (typeof gtag === "function") {
+    console.log("Google Analytics está pronto!");
+    gtag('event', 'test_event', { event_category: 'test' });
+} else {
+    console.log("Google Analytics ainda não carregou.");
+}
+
+function analyticsAddToCart(data){
+  gtag('event', 'add_to_cart', {
+    currency: "BRL",
+    value: data.product_total,
+    items: [{
+      item_id: data.product_id,
+      item_name: data.product_name,
+      quantity: data.product_amount,
+      price: data.product_value
+    }]
+  });
+  if (typeof fbq === "function") {
+    fbq('track', 'AddToCart', {
+      content_name: data.product_name,
+      content_category: 'Financiamento Coletivo',
+      content_ids: [data.product_id],
+      content_type: 'apoio',
+      value: data.product_value,
+      currency: 'BRL'
+    });
+  }
+  console.log('analyticsAddToCart',data);
+}
+
+function analyticsCheckout(data){
+  gtag('event', 'checkout', {
+    value: data.total,
+    num_items: data.items,
+    content_ids: data.items_id
+  });
+  if (typeof fbq === "function") {
+    fbq('track', 'InitiateCheckout', {
+      value: data.total,
+      currency: 'BRL',
+      num_items: data.amount,
+      content_ids: data.items_id
+    });
+  }
+  console.log('analyticsCheckout',data);
+}
+
+function analyticsPurchase(data){
+  gtag('event', 'purchase', {
+    transaction_id: data.transaction_id,
+    affiliation: 'MeepleStarter',
+    value: data.total,
+    currency: 'BRL',
+    tax: 0,
+    shipping: 0,
+    items: data.items
+  });
+  /*
+  [{
+    item_id: '98765',
+    item_name: 'Camiseta Preta',
+    quantity: 2,
+    price: 139.99
+  }]
+  */
+  if (typeof fbq === "function") {
+    fbq('track', 'Purchase', {
+      value: data.total,
+      currency: 'BRL',
+      transaction_id: data.transaction_id
+    });
+  }
+  console.log('analyticsPurchase',data);
+}
+
+
+function analyticsFollow(data){
+  gtag('event', 'follow', {
+    project_id: data.project_id,
+    project_name: data.project_name,
+  });
+  if (typeof fbq === "function") {
+    fbq('track', 'Follow', {
+      id: data.project_id,
+      name: data.project_name
+    });
+  }
+  console.log('analyticsFollow',data);
+}
+
+
+/*
+gtag('event', 'add_to_cart', {
+    currency: "BRL",
+    value: 150.00,
+    items: [{
+      item_id: "12345",
+      item_name: "Tênis Esportivo",
+      quantity: 1,
+      price: 150.00
+    }]
+  });
+
+  gtag('event', 'purchase', {
+    transaction_id: '123456',
+    affiliation: 'Loja Online',
+    value: 299.99,
+    currency: 'BRL',
+    tax: 10.00,
+    shipping: 20.00,
+    items: [{
+      item_id: '98765',
+      item_name: 'Camiseta Preta',
+      quantity: 2,
+      price: 139.99
+    }]
+  });
+
+  gtag('event', 'custom_event_name', {
+    custom_param1: 'value1',
+    custom_param2: 'value2'
+  });
+
+  fbq('track', 'AddToCart', {
+    content_name: 'Tênis Nike',
+    content_category: 'Calçados',
+    content_ids: ['12345'],
+    content_type: 'product',
+    value: 250.00,
+    currency: 'BRL'
+  });
+
+  fbq('track', 'InitiateCheckout', {
+    value: 500.00,
+    currency: 'BRL',
+    num_items: 3,
+    content_ids: ['12345', '67890', '111213']
+  });
+
+  fbq('track', 'Purchase', {
+    value: 999.99,
+    currency: 'BRL',
+    transaction_id: 'ORD123456'
+  });
+
+  */
